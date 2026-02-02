@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAB 성인 수영 전체 등록 현황</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #1e272e 0%, #2c3e50 100%);
+      min-height: 100vh;
+      padding: 28px 20px;
+      color: #ecf0f1;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ecf0f1;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    
+    .header p {
+      color: #95a5a6;
+      font-size: 13px;
+      margin: 6px 0 0;
+    }
+    
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .card {
+      background: rgba(44, 62, 80, 0.6);
+      border-radius: 10px;
+      padding: 14px 10px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+    }
+    
+    .card-label {
+      font-size: 10px;
+      color: #95a5a6;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    
+    .card-value {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 6px 0 0;
+    }
+    
+    .card-sub {
+      font-size: 10.5px;
+      color: #7f8c8d;
+      margin: 3px 0 0;
+    }
+    
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .panel {
+      background: rgba(44, 62, 80, 0.6);
+      border-radius: 12px;
+      padding: 18px 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+    }
+    
+    .panel-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ecf0f1;
+      margin: 0 0 14px;
+      border-bottom: 2px solid rgba(236, 240, 241, 0.2);
+      padding-bottom: 8px;
+    }
+    
+    .pie-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .pie-chart {
+      flex: 0 0 180px;
+      height: 180px;
+    }
+    
+    .pie-legend {
+      flex: 1;
+    }
+    
+    .legend-item {
+      margin-bottom: 10px;
+    }
+    
+    .legend-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #bdc3c7;
+      margin-bottom: 3px;
+    }
+    
+    .legend-value {
+      font-weight: 700;
+    }
+    
+    .progress-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(127, 140, 141, 0.3);
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    
+    .chart-container {
+      height: 220px;
+      margin-top: 10px;
+      position: relative;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+    }
+    
+    thead tr {
+      background: rgba(52, 73, 94, 0.5);
+    }
+    
+    th {
+      padding: 8px 6px;
+      border-bottom: 2px solid rgba(127, 140, 141, 0.3);
+      color: #bdc3c7;
+      font-weight: 600;
+      text-align: center;
+      font-size: 10.5px;
+    }
+
+    /* =========================
+       Column group separators (FIXED)
+       원하는 그룹:
+       [시간 | 월수금,화목토] / [매일반,월수금단과,화목토단과,실제인원] / [장기,단기]
+       ========================= */
+
+    /* 1) 헤더 1행(그룹명 행)에는 구분선이 생기지 않게 */
+    thead tr:first-child th {
+      border-right: none !important;
+    }
+
+    /* 2) 헤더 2행(실제 컬럼명 행)에서만 구분선 위치 지정
+       - 이 행에는 '시간'이 없고(위에서 rowspan), 총 8개 th
+         1: 월수금, 2: 화목토, 3: 매일반, 4: 월수금 단과, 5: 화목토 단과, 6: 실제 인원, 7: 장기, 8: 단기
+       - 구분선은 2(화목토) 뒤, 6(실제 인원) 뒤
+    */
+    thead tr:nth-child(2) th:nth-child(2),
+    thead tr:nth-child(2) th:nth-child(6) {
+      border-right: 2px solid rgba(149, 165, 166, 0.4);
+    }
+
+    /* 3) 본문/합계행은 실제 컬럼이 9개(시간 포함)
+       - 3(화목토) 뒤, 7(실제 인원) 뒤
+    */
+    tbody td:nth-child(3),
+    tfoot td:nth-child(3),
+    tbody td:nth-child(7),
+    tfoot td:nth-child(7) {
+      border-right: 2px solid rgba(149, 165, 166, 0.4);
+    }
+    
+    tbody tr {
+      border-bottom: 1px solid rgba(127, 140, 141, 0.2);
+    }
+    
+    tbody tr:nth-child(even) {
+      background: rgba(52, 73, 94, 0.2);
+    }
+    
+    tbody tr:nth-child(odd) {
+      background: rgba(44, 62, 80, 0.2);
+    }
+    
+    td {
+      padding: 7px 6px;
+      text-align: center;
+    }
+    
+    tfoot tr {
+      background: rgba(52, 73, 94, 0.5);
+    }
+    
+    tfoot td {
+      padding: 9px 6px;
+      font-weight: 700;
+    }
+    
+    .insights {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    
+    .insight-card {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      background: rgba(52, 73, 94, 0.3);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    
+    .insight-icon {
+      font-size: 16px;
+    }
+    
+    .insight-text {
+      font-size: 11px;
+      color: #bdc3c7;
+      line-height: 1.5;
+      margin: 0;
+    }
+    
+    @media (max-width: 768px) {
+      .cards {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .insights {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🏊 PAB 성인 수영 전체 등록 현황</h1>
+      <p>매일반/단과반 · 장기/단기 분석 · 중복 제거 실제 인원</p>
+    </div>
+
+    <!-- Top Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">단순 합계</div>
+        <div class="card-value" style="color: #7f8c8d;">658명</div>
+        <div class="card-sub">중복 포함</div>
+      </div>
+      <div class="card">
+        <div class="card-label">실제 등록</div>
+        <div class="card-value" style="color: #ecf0f1;">538명</div>
+        <div class="card-sub">-120명</div>
+      </div>
+      <div class="card">
+        <div class="card-label">매일반</div>
+        <div class="card-value" style="color: #9b59b6;">118명</div>
+        <div class="card-sub">21.9%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">단과반</div>
+        <div class="card-value" style="color: #16a085;">420명</div>
+        <div class="card-sub">78.1%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">장기 (3월+)</div>
+        <div class="card-value" style="color: #27ae60;">447명</div>
+        <div class="card-sub">83.1%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">단기 (2월)</div>
+        <div class="card-value" style="color: #e74c3c;">92명</div>
+        <div class="card-sub">17.1%</div>
+      </div>
+    </div>
+
+    <!-- Pie Charts -->
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">📊 등록 유형별 구성</div>
+        <div class="pie-section">
+          <div class="pie-chart">
+            <canvas id="pieType"></canvas>
+          </div>
+          <div class="pie-legend">
+            <div class="legend-item">
+              <div class="legend-label">
+                <span>매일반 (중복)</span>
+                <span class="legend-value" style="color: #9b59b6;">118명 (21.9%)</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 21.9%; background: #9b59b6;"></div>
+              </div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-label">
+                <span>월수금 단과</span>
+                <span class="legend-value" style="color: #3498db;">195명 (36.2%)</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 36.2%; background: #3498db;"></div>
+              </div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-label">
+                <span>화목토 단과</span>
+                <span class="legend-value" style="color: #e67e22;">225명 (41.8%)</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 41.8%; background: #e67e22;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">📅 등록 기간별 구성</div>
+        <div class="pie-section">
+          <div class="pie-chart">
+            <canvas id="pieTerm"></canvas>
+          </div>
+          <div class="pie-legend">
+            <div class="legend-item">
+              <div class="legend-label">
+                <span>장기 (3월 이후)</span>
+                <span class="legend-value" style="color: #27ae60;">447명 (83.1%)</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 83.1%; background: #27ae60;"></div>
+              </div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-label">
+                <span>단기 (2월)</span>
+                <span class="legend-value" style="color: #e74c3c;">92명 (17.1%)</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 17.1%; background: #e74c3c;"></div>
+              </div>
+            </div>
+            <div style="margin-top: 12px;">
+              <p style="font-size: 10.5px; color: #7f8c8d; line-height: 1.5; margin: 0;">
+                💡 실제 등록 인원 중 83.1%가 3월 이후 만료 — 대세 장기 등록
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bar Charts -->
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">시간대별 매일반 / 단과반 구성</div>
+        <div class="chart-container">
+          <canvas id="chartType"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">시간대별 장기 / 단기 구성 (실제 인원)</div>
+        <div class="chart-container">
+          <canvas id="chartTerm"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="panel">
+      <div class="panel-title">📋 시간대별 상세 분석</div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="2" style="vertical-align: middle;">시간</th>
+              <th colspan="2" style="border-bottom: none;">등록 현황</th>
+              <th colspan="4" style="border-bottom: none;">유형별 구성</th>
+              <th colspan="2" style="border-bottom: none;">기간별 구성</th>
+            </tr>
+            <tr>
+              <th style="border-bottom: 2px solid rgba(127, 140, 141, 0.3);">월수금</th>
+              <th style="border-bottom: 2px solid rgba(127, 140, 141, 0.3);">화목토</th>
+              <th style="border-bottom: 2px solid rgba(127, 140, 141, 0.3);">매일반</th>
+              <th style="border-bottom: 2px solid rgba(127, 140, 141, 0.3);">월수금 단과</th>
+              <th style="border-bottom: 2px solid rgba(127, 140, 141, 0.3);">화목토 단과</th>
+              <th style="border-bottom: 2px solid rgba(127, 140, 141, 0.3);">실제 인원</th>
+              <th style="border-bottom: 2px solid rgba(127, 140, 141, 0.3);">장기</th>
+              <th style="border-bottom: 2px solid rgba(127, 140, 141, 0.3);">단기</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+          <tfoot>
+            <tr>
+              <td style="color: #ecf0f1;">합계</td>
+              <td style="color: #3498db;">314</td>
+              <td style="color: #e67e22;">344</td>
+              <td style="color: #9b59b6;">118</td>
+              <td style="color: #95a5a6;">195</td>
+              <td style="color: #95a5a6;">225</td>
+              <td style="color: #ecf0f1;">538</td>
+              <td style="color: #27ae60;">447</td>
+              <td style="color: #e74c3c;">92</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="panel" style="margin-top: 16px;">
+      <div class="panel-title">💡 핵심 인사이트</div>
+      <div class="insights">
+        <div class="insight-card">
+          <span class="insight-icon">📊</span>
+          <p class="insight-text">단순 합계 658명 → 실제 538명 (중복 120명 제거, -18.2%)</p>
+        </div>
+        <div class="insight-card">
+          <span class="insight-icon">👥</span>
+          <p class="insight-text">매일반 비율 21.9% — 오전(30%) vs 저녁(10% 미만) 차이 뚜렷</p>
+        </div>
+        <div class="insight-card">
+          <span class="insight-icon">📈</span>
+          <p class="insight-text">실제 등록 인원의 83.1%가 장기 등록 — 대세 장기 등록 구조</p>
+        </div>
+        <div class="insight-card">
+          <span class="insight-icon">🌅</span>
+          <p class="insight-text">오전 시간대: 월수금 단과반과 매일반 비중 높음 (안정적 운동 패턴)</p>
+        </div>
+        <div class="insight-card">
+          <span class="insight-icon">🌆</span>
+          <p class="insight-text">오후/저녁 시간대: 화목토 단과반 비중 높음 (유연한 스케줄 선호)</p>
+        </div>
+        <div class="insight-card">
+          <span class="insight-icon">⚠️</span>
+          <p class="insight-text">2월 만료 92명 갱신 필요 — 14:00(21명), 20:00(14명) 집중 관리</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const timeData = [
+      { time:"6:00",  mwf:46, tts:46, daily:20, mwfOnly:26, ttsOnly:26, unique:72, uLong:61, uShort:11 },
+      { time:"7:00",  mwf:43, tts:35, daily:19, mwfOnly:24, ttsOnly:16, unique:59, uLong:54, uShort:5 },
+      { time:"8:00",  mwf:18, tts:22, daily:9,  mwfOnly:9,  ttsOnly:13, unique:31, uLong:24, uShort:7 },
+      { time:"9:00",  mwf:30, tts:24, daily:14, mwfOnly:16, ttsOnly:10, unique:40, uLong:34, uShort:6 },
+      { time:"10:00", mwf:29, tts:22, daily:11, mwfOnly:18, ttsOnly:11, unique:40, uLong:33, uShort:7 },
+      { time:"10:50", mwf:16, tts:15, daily:9,  mwfOnly:7,  ttsOnly:5,  unique:21, uLong:17, uShort:4 },
+      { time:"14:00", mwf:31, tts:35, daily:16, mwfOnly:15, ttsOnly:19, unique:50, uLong:29, uShort:21 },
+      { time:"19:00", mwf:31, tts:46, daily:7,  mwfOnly:24, ttsOnly:39, unique:70, uLong:63, uShort:7 },
+      { time:"20:00", mwf:41, tts:53, daily:6,  mwfOnly:35, ttsOnly:47, unique:88, uLong:74, uShort:14 },
+      { time:"21:00", mwf:29, tts:46, daily:7,  mwfOnly:21, ttsOnly:39, unique:67, uLong:58, uShort:10 },
+    ];
+
+    // Plugin for center text in doughnut charts
+    const centerTextPlugin = {
+      id: 'centerText',
+      beforeDraw: (chart) => {
+        if (chart.config.options.plugins.centerText) {
+          const { ctx, chartArea: { width, height } } = chart;
+          const centerX = width / 2;
+          const centerY = height / 2;
+          
+          ctx.save();
+          ctx.font = 'bold 20px Segoe UI';
+          ctx.fillStyle = '#ecf0f1';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(chart.config.options.plugins.centerText.text, centerX, centerY);
+          ctx.restore();
+        }
+      }
+    };
+    
+    Chart.register(centerTextPlugin);
+
+    // Populate table
+    const tbody = document.getElementById('tableBody');
+    timeData.forEach(d => {
+      tbody.innerHTML += `
+        <tr>
+          <td style="font-weight:700; color:#ecf0f1;">${d.time}</td>
+          <td style="color:#3498db; font-weight:600;">${d.mwf}</td>
+          <td style="color:#e67e22; font-weight:600;">${d.tts}</td>
+          <td style="color:#9b59b6; font-weight:600;">${d.daily}</td>
+          <td style="color:#95a5a6;">${d.mwfOnly}</td>
+          <td style="color:#95a5a6;">${d.ttsOnly}</td>
+          <td style="font-weight:700;">${d.unique}</td>
+          <td style="color:#27ae60; font-weight:600;">${d.uLong}</td>
+          <td style="color:#e74c3c; font-weight:600;">${d.uShort}</td>
+        </tr>
+      `;
+    });
+
+    // Chart.js common options
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#95a5a6', font: { size: 10 } }
+        },
+        tooltip: {
+          backgroundColor: '#34495e',
+          titleColor: '#ecf0f1',
+          bodyColor: '#ecf0f1',
+          borderColor: '#7f8c8d',
+          borderWidth: 1
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#95a5a6', font: { size: 11 } },
+          grid: { color: 'rgba(149, 165, 166, 0.1)' }
+        },
+        y: {
+          ticks: { color: '#95a5a6', font: { size: 10 } },
+          grid: { color: 'rgba(149, 165, 166, 0.1)' }
+        }
+      }
+    };
+
+    // Pie Chart - Type
+    new Chart(document.getElementById('pieType'), {
+      type: 'doughnut',
+      data: {
+        labels: ['매일반', '월수금 단과', '화목토 단과'],
+        datasets: [{
+          data: [118, 195, 225],
+          backgroundColor: ['#9b59b6', '#3498db', '#e67e22']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#34495e',
+            titleColor: '#ecf0f1',
+            bodyColor: '#ecf0f1'
+          },
+          centerText: {
+            text: '538명'
+          },
+          datalabels: {
+            color: '#fff',
+            font: { size: 14, weight: 'bold' },
+            formatter: (value, ctx) => {
+              const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return percentage + '%';
+            },
+            anchor: 'center',
+            align: 'center'
+          }
+        }
+      }
+    });
+
+    // Pie Chart - Term
+    new Chart(document.getElementById('pieTerm'), {
+      type: 'doughnut',
+      data: {
+        labels: ['장기', '단기'],
+        datasets: [{
+          data: [447, 92],
+          backgroundColor: ['#27ae60', '#e74c3c']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#34495e',
+            titleColor: '#ecf0f1',
+            bodyColor: '#ecf0f1'
+          },
+          centerText: {
+            text: '538명'
+          },
+          datalabels: {
+            color: '#fff',
+            font: { size: 14, weight: 'bold' },
+            formatter: (value, ctx) => {
+              const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return percentage + '%';
+            },
+            anchor: 'center',
+            align: 'center'
+          }
+        }
+      }
+    });
+
+    // Bar Chart - Type
+    new Chart(document.getElementById('chartType'), {
+      type: 'bar',
+      data: {
+        labels: timeData.map(d => d.time),
+        datasets: [
+          { label: '매일반', data: timeData.map(d => d.daily), backgroundColor: '#9b59b6', stack: 'a' },
+          { label: '월수금 단과', data: timeData.map(d => d.mwfOnly), backgroundColor: '#3498db', stack: 'a' },
+          { label: '화목토 단과', data: timeData.map(d => d.ttsOnly), backgroundColor: '#e67e22', stack: 'a' }
+        ]
+      },
+      options: {
+        ...commonOptions,
+        plugins: {
+          ...commonOptions.plugins,
+          datalabels: {
+            color: '#fff',
+            font: { size: 10, weight: 'bold' },
+            formatter: (value, ctx) => {
+              const dataIndex = ctx.dataIndex;
+              const d = timeData[dataIndex];
+              const total = d.unique;
+              const percentage = ((value / total) * 100).toFixed(0);
+              return value > 0 && percentage >= 5 ? percentage + '%' : '';
+            }
+          }
+        }
+      }
+    });
+
+    // Bar Chart - Term
+    new Chart(document.getElementById('chartTerm'), {
+      type: 'bar',
+      data: {
+        labels: timeData.map(d => d.time),
+        datasets: [
+          { label: '장기 (3월+)', data: timeData.map(d => d.uLong), backgroundColor: '#27ae60', stack: 'a' },
+          { label: '단기 (2월)', data: timeData.map(d => d.uShort), backgroundColor: '#e74c3c', stack: 'a' }
+        ]
+      },
+      options: {
+        ...commonOptions,
+        plugins: {
+          ...commonOptions.plugins,
+          datalabels: {
+            color: '#fff',
+            font: { size: 10, weight: 'bold' },
+            formatter: (value, ctx) => {
+              const dataIndex = ctx.dataIndex;
+              const d = timeData[dataIndex];
+              const total = d.unique;
+              const percentage = ((value / total) * 100).toFixed(0);
+              return value > 0 && percentage >= 5 ? percentage + '%' : '';
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
